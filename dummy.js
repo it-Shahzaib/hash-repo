@@ -2,8 +2,29 @@ const http = require("http");
 const fs = require("fs");
 const url = require("url");
 
-let parsedBody = []; // Array
+let users = []; // Array
 let userId = 1; // Keep track of users
+
+fs.readFile("./userId.js", "utf8", (err, data) => {
+  if (err) {
+    console.error(err);
+  }
+  userId = parseInt(data) || 1;
+  console.log("ID:", userId);
+});
+
+fs.readFile("./app.js", "utf8", (err, data) => {
+  if (err) {
+    console.error(err);
+  } else {
+    if (data !== "") {
+      users = JSON.parse(data);
+      console.log("Users:", users);
+    } else {
+      users = [];
+    }
+  }
+});
 
 const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/post") {
@@ -16,20 +37,27 @@ const server = http.createServer((req, res) => {
 
     req.on("end", () => {
       try {
-        const newBody = JSON.parse(body);
-        newBody.id = userId;
+        const user = JSON.parse(body);
+        user.id = userId;
         userId++;
-        parsedBody.push(newBody);
+
+        fs.writeFile("./userId.js", userId.toString(), (err) => {
+          if (err) {
+            console.error(err);
+          }
+        });
+        users.push(user);
 
         console.log("Path:", parsedUrl.pathname);
 
-        fs.writeFile("./app.js", JSON.stringify(parsedBody), (err) => {
+        fs.writeFile("./app.js", JSON.stringify(users), (err) => {
           if (err) {
             console.error(err);
             res.writeHead(500, { "Content-Type": "text/plain" });
             res.end("Internal Server Error");
           } else {
-            console.log(newBody);
+            console.log(user);
+            console.log("Count:", userId);
             res.writeHead(200, { "Content-Type": "text/plain" });
             res.end("OK");
           }
@@ -45,7 +73,7 @@ const server = http.createServer((req, res) => {
     const query = parsedUrl.query;
     const id = query.id;
 
-    const getUser = parsedBody.find((elem) => elem.id == id);
+    const getUser = users.find((elem) => elem.id == id);
 
     console.log("Path:", parsedUrl.pathname);
 
@@ -72,21 +100,23 @@ const server = http.createServer((req, res) => {
       const requestBody = JSON.parse(body);
       const name = requestBody.name;
 
-      const getUserIndex = parsedBody.findIndex((elem) => elem.id == id);
+      const getUserIndex = users.findIndex((elem) => elem.id == id);
 
       console.log("Path:", parsedUrl.pathname);
 
       if (getUserIndex !== -1) {
-        parsedBody[getUserIndex].name = name;
+        users[getUserIndex].name = name;
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("404 not found");
       }
 
-      fs.writeFile("./app.js", JSON.stringify(parsedBody), (err) => {
+      fs.writeFile("./app.js", JSON.stringify(users), (err) => {
         if (err) {
           console.error(err);
           res.writeHead(500, { "Content-Type": "text/plain" });
           res.end("Internal Server Error");
         } else {
-          console.log(parsedBody);
+          console.log(users);
           res.writeHead(200, { "Content-Type": "text/plain" });
           res.end("OK");
         }
@@ -97,25 +127,25 @@ const server = http.createServer((req, res) => {
     const query = parsedUrl.query;
     const id = query.id;
 
-    const getUser = parsedBody.find((elem) => elem.id == id);
-    const getUserIndex = parsedBody.findIndex((elem) => elem.id == id);
+    const getUser = users.find((elem) => elem.id == id);
+    const getUserIndex = users.findIndex((elem) => elem.id == id);
 
     console.log("Path:", parsedUrl.pathname);
 
     if (getUserIndex !== -1) {
-      parsedBody.splice(getUserIndex, 1);
+      users.splice(getUserIndex, 1);
     } else {
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("404 not found");
     }
 
-    fs.writeFile("./app.js", JSON.stringify(parsedBody), (err) => {
+    fs.writeFile("./app.js", JSON.stringify(users), (err) => {
       if (err) {
         console.error(err);
         res.writeHead(500, { "Content-Type": "text/plain" });
         res.end("Internal server error");
       } else {
-        console.log(parsedBody);
+        console.log(users);
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.write(JSON.stringify(getUser));
         res.end(" OK");
@@ -125,6 +155,7 @@ const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     console.log("Path:", parsedUrl.pathname);
     console.log("Invalid url");
+
     res.writeHead(400, { "Content-Type": "text/plain" });
     res.end("400 bad request");
   }
