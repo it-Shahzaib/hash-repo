@@ -76,7 +76,6 @@ const server = http.createServer((req, res) => {
     const getUser = users.find((elem) => elem.id == id);
 
     console.log("Path:", parsedUrl.pathname);
-
     if (getUser) {
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.write(JSON.stringify(getUser));
