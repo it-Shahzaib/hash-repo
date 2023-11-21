@@ -41,11 +41,6 @@ const server = http.createServer((req, res) => {
         user.id = userId;
         userId++;
 
-        fs.writeFile("./userId.js", userId.toString(), (err) => {
-          if (err) {
-            console.error(err);
-          }
-        });
         users.push(user);
 
         console.log("Path:", parsedUrl.pathname);
