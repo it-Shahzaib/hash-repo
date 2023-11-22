@@ -1,10 +1,11 @@
-const express = require("express");
-const app = express();
-const fs = require("fs");
+const express = require("express"); // Import express app
+const app = express(); // Instance of express app
+const fs = require("fs"); // Import files module
 
 let users = []; // Array
 let userId = 1; // Keep track of users
 
+// Read from the userId file
 fs.readFile("./userId.js", "utf8", (err, data) => {
   if (err) {
     console.error(err);
@@ -15,6 +16,7 @@ fs.readFile("./userId.js", "utf8", (err, data) => {
   startServer();
 });
 
+// Read from the users file
 fs.readFile("./users.js", "utf8", (err, data) => {
   if (err) {
     console.error(err);
@@ -28,9 +30,11 @@ fs.readFile("./users.js", "utf8", (err, data) => {
   }
 });
 
+// Function to handle all type of requests
 function startServer() {
-  app.use(express.json());
+  app.use(express.json()); // Parse incoming requests body
 
+  // Middleware to log request details
   app.use((req, res, next) => {
     console.log("Incoming request");
     console.log("Request:", req.method);
@@ -38,6 +42,7 @@ function startServer() {
     next();
   });
 
+  // Handle all post requests
   app.post("/post", (req, res, next) => {
     const user = req.body;
 
@@ -48,6 +53,7 @@ function startServer() {
         user.id = userId;
         users.push(user);
         userId++;
+
         fs.writeFile("./userId.js", JSON.stringify(userId), (err) => {
           if (err) {
             console.error(err);
@@ -69,6 +75,7 @@ function startServer() {
     }
   });
 
+  // Handle all get requests
   app.get("/get/:id", (req, res) => {
     const id = parseInt(req.params.id);
     console.log(typeof id);
@@ -84,11 +91,14 @@ function startServer() {
     }
   });
 
+  // Handle all put requests
   app.put("/put/:id", (req, res, next) => {
     const user = req.body;
     const id = parseInt(req.params.id);
     const getUserIndex = users.findIndex((user) => user.id === id);
+
     console.log("Index:", getUserIndex);
+
     if (getUserIndex === -1) {
       res.status(404).send("404 not found");
     }
@@ -114,6 +124,7 @@ function startServer() {
     }
   });
 
+  // Handle all delete requests
   app.delete("/delete/:id", (req, res) => {
     const id = parseInt(req.params.id);
     const getUser = users.find((user) => user.id === id);
@@ -125,7 +136,7 @@ function startServer() {
       res.status(404).send("404 not found");
     } else {
       users.splice(getUserIndex, 1);
-      userId--;
+
       fs.writeFile("./users.js", JSON.stringify(users), (err) => {
         if (err) {
           console.error(err);
@@ -137,12 +148,16 @@ function startServer() {
     }
   });
 
+  // If no route matches the path
+  app.use((req, res, next) => {
+    res.status(404).send("Not found");
+  });
+
+  // Handle errors that can occur in the cycle
   app.use((err, req, res, next) => {
     const status = err.status;
     console.log("Status:", status);
-    res
-      .status(status || 500)
-      .send("Something went wrong! Please try again later");
+    res.status(status || 500).send(err.message);
   });
 
   const port = 3000;
